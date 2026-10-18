@@ -4,21 +4,32 @@ import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
-async function bootstrap() {
+let cachedServer: any;
+
+export async function bootstrap() {
+  if (cachedServer) {
+    return cachedServer;
+  }
+
   const logger = new Logger('Bootstrap');
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
   const appName = configService.get<string>('APP_NAME', 'MotoTix');
-  const port = configService.get<number>('PORT', 3001);
-  const corsOrigin = configService.get<string>('CORS_ORIGIN', 'http://localhost:5173');
+  const port = process.env.PORT || configService.get<number>('PORT', 3001);
+  const corsOrigin = configService.get<string>('CORS_ORIGIN', '*');
 
   // Set global prefix /api
   app.setGlobalPrefix('api');
 
   // Enable CORS
+  const isCorsWildcard = corsOrigin === '*' || !corsOrigin;
   app.enableCors({
-    origin: corsOrigin.includes(',') ? corsOrigin.split(',') : corsOrigin,
+    origin: isCorsWildcard
+      ? true
+      : corsOrigin.includes(',')
+        ? corsOrigin.split(',').map((o) => o.trim())
+        : corsOrigin,
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
   });
@@ -47,12 +58,40 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document);
 
-  await app.listen(port);
-  logger.log(`====================================================`);
-  logger.log(`🚀 ${appName} Backend running on: http://localhost:${port}/api`);
-  logger.log(`📖 Swagger API Documentation:  http://localhost:${port}/api/docs`);
-  logger.log(`❤️  Health Check:               http://localhost:${port}/api/health`);
-  logger.log(`====================================================`);
+  // Route helpers on underlying Express server
+  const httpAdapter = app.getHttpAdapter().getInstance();
+  httpAdapter.get('/', (_req: any, res: any) => {
+    res.redirect('/api/docs');
+  });
+  httpAdapter.get('/api', (_req: any, res: any) => {
+    res.json({
+      status: 'online',
+      name: `${appName} API`,
+      docs: '/api/docs',
+      health: '/api/health',
+    });
+  });
+
+  await app.init();
+  cachedServer = httpAdapter;
+
+  if (!process.env.VERCEL) {
+    await app.listen(port);
+    logger.log(`====================================================`);
+    logger.log(`🚀 ${appName} Backend running on: http://localhost:${port}/api`);
+    logger.log(`📖 Swagger API Documentation:  http://localhost:${port}/api/docs`);
+    logger.log(`❤️  Health Check:               http://localhost:${port}/api/health`);
+    logger.log(`====================================================`);
+  }
+
+  return cachedServer;
 }
 
-bootstrap();
+export default async function handler(req: any, res: any) {
+  const server = await bootstrap();
+  server(req, res);
+}
+
+if (!process.env.VERCEL) {
+  bootstrap();
+}
