@@ -59,7 +59,8 @@ const INITIAL_ZONES: Zone[] = [
 
 export const App: React.FC = () => {
   const appName = import.meta.env.VITE_APP_NAME || 'MotoTix';
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'https://ticket-motogp.vercel.app/api';
   const pusherKey = import.meta.env.VITE_PUSHER_KEY || '5360efba11d8760e796f';
   const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'ap1';
 
