@@ -3,6 +3,8 @@ import { Flag, ShieldCheck, Terminal, Database, Code, CheckCircle2 } from 'lucid
 
 export const Footer: React.FC = () => {
   const appName = import.meta.env.VITE_APP_NAME || 'MotoTix';
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'https://ticket-motogp.vercel.app/api';
 
   return (
     <footer className="bg-[#08090d] border-t border-[#1d202e] text-gray-400 py-16 text-sm">
@@ -47,7 +49,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="http://localhost:3001/api/health"
+                  href={`${apiBaseUrl}/health`}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-[#00F0FF] transition-colors flex items-center space-x-1"
@@ -57,7 +59,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <a
-                  href="http://localhost:3001/api/docs"
+                  href={`${apiBaseUrl}/docs`}
                   target="_blank"
                   rel="noreferrer"
                   className="hover:text-[#00F0FF] transition-colors flex items-center space-x-1"

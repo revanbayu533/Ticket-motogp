@@ -15,6 +15,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const appName = import.meta.env.VITE_APP_NAME || 'MotoTix';
 
+  const apiBaseUrl =
+    import.meta.env.VITE_API_BASE_URL || 'https://ticket-motogp.vercel.app/api';
+
   return (
     <header className="sticky top-0 z-50 bg-[#0c0d12]/90 backdrop-blur-md border-b border-[#20222e]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,7 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               Booking Guide
             </a>
             <a
-              href="http://localhost:3001/api/docs"
+              href={`${apiBaseUrl}/docs`}
               target="_blank"
               rel="noreferrer"
               className="text-sm font-semibold text-gray-400 hover:text-[#00F0FF] transition-colors flex items-center space-x-1"
