@@ -1,0 +1,140 @@
+// MotoTix - MotoGP Official Ticketing Platform Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  COMPLETED
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  EXPIRED
+}
+
+enum TicketStatus {
+  ACTIVE
+  USED
+  REVOKED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  role      Role     @default(CUSTOMER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  orders    Order[]
+
+  @@map("users")
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  title       String
+  description String?
+  location    String
+  venue       String?
+  eventDate   DateTime    @map("event_date")
+  bannerUrl   String?     @map("banner_url")
+  status      EventStatus @default(PUBLISHED)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  zones       Zone[]
+
+  @@map("events")
+}
+
+model Zone {
+  id          String   @id @default(uuid())
+  eventId     String   @map("event_id")
+  name        String
+  capacity    Int
+  price       Decimal  @db.Decimal(12, 2)
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tickets     Ticket[]
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("zones")
+}
+
+model Order {
+  id          String      @id @default(uuid())
+  bookingCode String      @unique @map("booking_code")
+  userId      String      @map("user_id")
+  totalAmount Decimal     @map("total_amount") @db.Decimal(12, 2)
+  status      OrderStatus @default(PENDING)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  payment     Payment?
+  tickets     Ticket[]
+
+  @@index([bookingCode])
+  @@index([userId])
+  @@map("orders")
+}
+
+model Ticket {
+  id           String       @id @default(uuid())
+  ticketNumber String       @unique @map("ticket_number")
+  orderId      String       @map("order_id")
+  zoneId       String       @map("zone_id")
+  holderName   String       @map("holder_name")
+  holderEmail  String       @map("holder_email")
+  status       TicketStatus @default(ACTIVE)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+  order        Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  zone         Zone         @relation(fields: [zoneId], references: [id])
+
+  @@index([orderId])
+  @@index([ticketNumber])
+  @@index([zoneId])
+  @@map("tickets")
+}
+
+model Payment {
+  id            String        @id @default(uuid())
+  orderId       String        @unique @map("order_id")
+  amount        Decimal       @db.Decimal(12, 2)
+  paymentMethod String        @map("payment_method")
+  paymentStatus PaymentStatus @default(PENDING) @map("payment_status")
+  transactionId String?       @unique @map("transaction_id")
+  paidAt        DateTime?     @map("paid_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+  @@map("payments")
+}

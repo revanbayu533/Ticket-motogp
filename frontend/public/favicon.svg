@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E10600" />
+      <stop offset="100%" stop-color="#800000" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#grad)" />
+  <!-- Speed lines -->
+  <path d="M12 44 L24 20 L28 20 L16 44 Z" fill="#ffffff" opacity="0.3" />
+  <path d="M22 44 L34 20 L38 20 L26 44 Z" fill="#ffffff" opacity="0.6" />
+  <!-- M letter stylized -->
+  <path d="M18 42 L26 22 L32 34 L38 22 L46 42 L40 42 L36 30 L32 38 L28 30 L24 42 Z" fill="#ffffff" font-weight="bold" />
+  <!-- Racing Accent -->
+  <polygon points="46,22 52,22 48,28 42,28" fill="#FFD700" />
+</svg>
