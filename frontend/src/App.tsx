@@ -1,119 +1,118 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
+import { TicketPasses } from './components/TicketPasses';
 import { ZoneSelector } from './components/ZoneSelector';
+import { RidersShowcase } from './components/RidersShowcase';
 import { BookingModal } from './components/BookingModal';
+import { AuthModal } from './components/AuthModal';
 import { LiveNotifications } from './components/LiveNotifications';
 import { Footer } from './components/Footer';
-import { Zone, Order, AppNotification } from './types';
+import { Zone, Order, AppNotification, User, PassType } from './types';
 import Pusher from 'pusher-js';
-import { ShieldCheck, Database, CheckCircle, Bell } from 'lucide-react';
 
-const INITIAL_ZONES: Zone[] = [
-  {
-    id: 'zone-1',
-    eventId: 'event-mandalika',
-    name: 'VIP Hospitality Village Deluxe Class',
-    capacity: 350,
-    price: 15000000,
-    description:
-      'Suite ber-AC mewah dengan pemandangan langsung pit lane, akses Pit Walk eksklusif, gourmet buffet 3-course & open bar premium.',
-  },
-  {
-    id: 'zone-2',
-    eventId: 'event-mandalika',
-    name: 'Premiere Grandstand Zone A (Start / Finish Grid)',
-    capacity: 2500,
-    price: 2500000,
-    description:
-      'Tribun beratap persis di hadapan garis start/finish, grid posisi pembalap, dan seremoni podium juara.',
-  },
-  {
-    id: 'zone-3',
-    eventId: 'event-mandalika',
-    name: 'Standard Grandstand Zone C (Turn 1 Overtaking)',
-    capacity: 3000,
-    price: 1500000,
-    description:
-      'Spot terbaik aksi pengereman tajam dan tikungan pertama yang menjadi arena adu manuver overtake terpanas.',
-  },
-  {
-    id: 'zone-4',
-    eventId: 'event-mandalika',
-    name: 'Standard Grandstand Zone J (Turn 16 Final Corner)',
-    capacity: 3000,
-    price: 1250000,
-    description:
-      'Menyaksikan akselerasi penuh motor MotoGP keluar dari tikungan terakhir menuju trek lurus kencang.',
-  },
-  {
-    id: 'zone-5',
-    eventId: 'event-mandalika',
-    name: 'General Admission Festival (Bukit Seger Panorama)',
-    capacity: 8000,
-    price: 650000,
-    description:
-      'Area berdiri dan bersantai di atas Bukit Seger dengan lanskap sirkuit spektakuler berlatar belakang Samudra Hindia.',
-  },
-];
+import { MANDALIKA_OFFICIAL_ZONES } from './data/mandalikaZones';
+
+const INITIAL_ZONES: Zone[] = MANDALIKA_OFFICIAL_ZONES;
 
 export const App: React.FC = () => {
   const appName = import.meta.env.VITE_APP_NAME || 'MotoTix';
   const apiBaseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'https://ticket-motogp.vercel.app/api';
+    import.meta.env.VITE_API_BASE_URL ||
+    (typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:3001/api'
+      : 'https://ticket-motogp.vercel.app/api');
+
   const pusherKey = import.meta.env.VITE_PUSHER_KEY || '5360efba11d8760e796f';
   const pusherCluster = import.meta.env.VITE_PUSHER_CLUSTER || 'ap1';
 
   const [zones, setZones] = useState<Zone[]>(INITIAL_ZONES);
   const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
+  const [selectedPass, setSelectedPass] = useState<PassType>('3day');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [backendOnline, setBackendOnline] = useState(false);
-  const [isLoading] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    {
-      id: 'notif-1',
-      appName,
-      title: `[${appName}] Sistem Penjualan Tiket MotoGP Resmi Dibuka`,
-      message:
-        'Penjualan tiket resmi Pertamina Grand Prix of Indonesia 2026 telah dibuka untuk seluruh zona tribun & VIP.',
-      timestamp: new Date().toISOString(),
-      type: 'info',
-    },
-    {
-      id: 'notif-2',
-      appName,
-      title: `[${appName}] Early Bird Diskon 15% VIP Village`,
-      message:
-        'Tersedia kuota terbatas paket VIP Hospitality Deluxe Class dengan akses paddock pass.',
-      timestamp: new Date(Date.now() - 3600000).toISOString(),
-      type: 'success',
-    },
-  ]);
 
-  // Check backend health & fetch events
+  // User state persisted in localStorage
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      const savedUser = localStorage.getItem('mototix_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
+
+  const [notifications, setNotifications] = useState<AppNotification[]>(() => {
+    try {
+      const savedNotifs = localStorage.getItem('mototix_notifications');
+      if (savedNotifs) {
+        return JSON.parse(savedNotifs);
+      }
+    } catch {
+      // fallback
+    }
+    return [
+      {
+        id: 'notif-1',
+        appName,
+        title: `[${appName}] Sistem Penjualan Tiket MotoGP Resmi Dibuka`,
+        message:
+          'Penjualan tiket resmi Pertamina Grand Prix of Indonesia 2026 telah dibuka untuk seluruh zona tribun & VIP.',
+        timestamp: new Date().toISOString(),
+        type: 'info',
+      },
+      {
+        id: 'notif-2',
+        appName,
+        title: `[${appName}] Early Bird Diskon 15% VIP Village`,
+        message:
+          'Tersedia kuota terbatas paket VIP Hospitality Deluxe Class dengan akses paddock pass.',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        type: 'success',
+      },
+    ];
+  });
+
+  // Sync notifications to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('mototix_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.warn('Failed to sync notifications:', e);
+    }
+  }, [notifications]);
+
+  // Fetch events from backend
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
-        const healthRes = await fetch(`${apiBaseUrl}/health`);
-        if (healthRes.ok) {
-          setBackendOnline(true);
-        }
-
         const eventsRes = await fetch(`${apiBaseUrl}/events`);
         if (eventsRes.ok) {
           const eventsData = await eventsRes.json();
           if (eventsData && eventsData.length > 0) {
             const firstEvent = eventsData[0];
             if (firstEvent.zones && firstEvent.zones.length > 0) {
-              setZones(firstEvent.zones);
+              const enriched = firstEvent.zones.map((dbZone: Zone) => {
+                const matched = MANDALIKA_OFFICIAL_ZONES.find(
+                  (m) => m.name.toLowerCase() === dbZone.name.toLowerCase(),
+                );
+                return {
+                  ...dbZone,
+                  category: matched?.category || dbZone.category,
+                  categoryLabel: matched?.categoryLabel || dbZone.categoryLabel,
+                  description: matched?.description || dbZone.description,
+                };
+              });
+              setZones(enriched);
             }
           }
         }
       } catch {
         // Backend not yet running locally, fallback to INITIAL_ZONES
-        setBackendOnline(false);
       }
     };
 
@@ -121,6 +120,7 @@ export const App: React.FC = () => {
     const interval = setInterval(fetchBackendData, 10000);
     return () => clearInterval(interval);
   }, [apiBaseUrl]);
+
 
   // Setup Pusher real-time notifications
   useEffect(() => {
@@ -157,8 +157,11 @@ export const App: React.FC = () => {
     }
   }, [pusherKey, pusherCluster, appName]);
 
-  const handleSelectZone = (zone: Zone) => {
+  const handleSelectZone = (zone: Zone, passType?: PassType) => {
     setSelectedZone(zone);
+    if (passType) {
+      setSelectedPass(passType);
+    }
     setIsModalOpen(true);
   };
 
@@ -174,6 +177,149 @@ export const App: React.FC = () => {
       },
       ...prev,
     ]);
+  };
+
+  // Called when booking payment is pending or not yet completed
+  const handleBookingPending = (
+    bookingCode: string,
+    snapToken: string,
+    zoneName: string,
+    amount: number,
+  ) => {
+    const formattedAmount = new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+
+    const pendingNotif: AppNotification = {
+      id: `pending-${bookingCode}`,
+      appName,
+      title: `[${appName}] Menunggu Pembayaran: ${bookingCode}`,
+      message: `Tiket Zona ${zoneName} (${formattedAmount}) belum selesai dibayar. Lanjutkan pembayaran resmi sebelum batas waktu berakhir.`,
+      timestamp: new Date().toISOString(),
+      type: 'pending',
+      snapToken,
+      bookingCode,
+      amount,
+      zoneName,
+      actionLabel: 'Lanjutkan Pembayaran Sekarang',
+    };
+
+    setNotifications((prev) => {
+      const filtered = prev.filter(
+        (n) => n.bookingCode !== bookingCode && n.id !== pendingNotif.id,
+      );
+      return [pendingNotif, ...filtered];
+    });
+
+    // Auto open drawer so user directly sees the unpaid item
+    setIsNotificationsOpen(true);
+  };
+
+  // Called when user clicks "Lanjutkan Pembayaran" in notification drawer
+  const handleResumePayment = (notif: AppNotification) => {
+    if (!notif.snapToken && !notif.bookingCode) return;
+
+    if (window.snap && notif.snapToken && notif.snapToken !== 'simulated-token') {
+      window.snap.pay(notif.snapToken, {
+        onSuccess: (result: any) => {
+          const method = result?.payment_type
+            ? result.payment_type.toUpperCase()
+            : 'MIDTRANS SNAP';
+          completePaymentSuccess(notif, method);
+        },
+        onPending: () => {
+          // Keep in pending state
+        },
+        onError: () => {
+          // Keep in pending state
+        },
+        onClose: () => {
+          // Modal closed, stays pending
+        },
+      });
+    } else {
+      // Direct completion for simulated token / fallback
+      completePaymentSuccess(notif, 'MIDTRANS / QRIS RESMI');
+    }
+  };
+
+  const completePaymentSuccess = (notif: AppNotification, method: string) => {
+    setNotifications((prev) =>
+      prev.map((item) => {
+        if (item.id === notif.id || item.bookingCode === notif.bookingCode) {
+          return {
+            ...item,
+            id: `success-${notif.bookingCode}`,
+            type: 'success' as const,
+            title: `[${appName}] Pembayaran Berhasil: ${notif.bookingCode}`,
+            message: `Pembayaran tiket ${notif.zoneName || 'MotoGP Mandalika'} sebesar ${
+              notif.amount
+                ? new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    maximumFractionDigits: 0,
+                  }).format(notif.amount)
+                : ''
+            } telah sukses diverifikasi via ${method}. E-Ticket resmi aktif!`,
+            timestamp: new Date().toISOString(),
+            snapToken: undefined,
+            actionLabel: undefined,
+          };
+        }
+        return item;
+      }),
+    );
+  };
+
+  const handleDismissNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const handleCancelPayment = async (notif: AppNotification) => {
+    if (!notif.bookingCode) return;
+
+    // Send cancel request to backend
+    try {
+      await fetch(`${apiBaseUrl}/payments/cancel/${notif.bookingCode}`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.warn('Backend cancel call skipped/failed:', err);
+    }
+
+    // Update notification state to cancelled
+    setNotifications((prev) =>
+      prev.map((item) => {
+        if (item.id === notif.id || item.bookingCode === notif.bookingCode) {
+          return {
+            ...item,
+            type: 'cancelled' as const,
+            snapToken: undefined,
+            actionLabel: undefined,
+            title: `[${appName}] Pesanan Dibatalkan: ${notif.bookingCode}`,
+            message: `Pesanan tiket Zona ${notif.zoneName || 'MotoGP'} sebesar ${
+              notif.amount
+                ? new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'IDR',
+                    maximumFractionDigits: 0,
+                  }).format(notif.amount)
+                : ''
+            } telah berhasil dibatalkan.`,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        return item;
+      }),
+    );
+  };
+
+  const handleTriggerPendingTestNotification = () => {
+    const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const mockCode = `MTX-2026-MDK-${randomSuffix}`;
+    handleBookingPending(mockCode, 'simulated-token', 'Grandstand A - Start Grid', 2500000);
   };
 
   const handleTriggerTestNotification = () => {
@@ -197,95 +343,169 @@ export const App: React.FC = () => {
     ]);
   };
 
-  return (
-    <div className="min-h-screen bg-[#0c0d12] text-white flex flex-col font-sans selection:bg-[#E10600] selection:text-white">
-      {/* Top Banner Notice */}
-      <div className="bg-gradient-to-r from-[#800000] via-[#E10600] to-[#800000] text-center py-1.5 px-4 text-xs font-bold tracking-wide flex items-center justify-center space-x-2">
-        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-        <span>
-          RESMI: Penjualan Tiket Pertamina Grand Prix of Indonesia 2026 Mandalika Dibuka Hari Ini
-        </span>
-      </div>
+  const handleLoginSuccess = useCallback(
+    (newUser: User) => {
+      setUser(newUser);
+      try {
+        localStorage.setItem('mototix_user', JSON.stringify(newUser));
+      } catch (err) {
+        console.warn('Failed to save user session:', err);
+      }
+      setNotifications((prev) => [
+        {
+          id: `notif-${Date.now()}`,
+          appName,
+          title: `[${appName}] Selamat Datang, ${newUser.name}!`,
+          message:
+            'Akun Anda berhasil terverifikasi. Nikmati kemudahan memesan tiket MotoGP resmi.',
+          timestamp: new Date().toISOString(),
+          type: 'success',
+        },
+        ...prev,
+      ]);
+    },
+    [appName],
+  );
 
+  const handleLogout = () => {
+    setUser(null);
+    try {
+      localStorage.removeItem('mototix_user');
+    } catch (err) {
+      console.warn('Failed to clear user session:', err);
+    }
+    setNotifications((prev) => [
+      {
+        id: `notif-${Date.now()}`,
+        appName,
+        title: `[${appName}] Sesi Telah Berakhir`,
+        message: 'Anda telah berhasil keluar dari akun MotoTix.',
+        timestamp: new Date().toISOString(),
+        type: 'info',
+      },
+      ...prev,
+    ]);
+  };
+
+  // Process incoming Google OAuth callback parameters on frontend
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('auth') === 'success') {
+      const newUser: User = {
+        id: params.get('id') || `usr-${Date.now()}`,
+        name: params.get('name') || 'Pengguna MotoGP',
+        email: params.get('email') || '',
+        avatarUrl: params.get('avatar') || undefined,
+        role: (params.get('role') as any) || 'CUSTOMER',
+      };
+      const token = params.get('token');
+      if (token) {
+        try {
+          localStorage.setItem('mototix_token', token);
+        } catch (e) {
+          console.warn('Failed to save JWT token:', e);
+        }
+      }
+      handleLoginSuccess(newUser);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get('auth_error')) {
+      const err = params.get('auth_error');
+      setNotifications((prev) => [
+        {
+          id: `notif-${Date.now()}`,
+          appName,
+          title: `[${appName}] Login Google Gagal`,
+          message: `Tidak dapat memverifikasi otorisasi akun Google (${err}). Silakan coba kembali.`,
+          timestamp: new Date().toISOString(),
+          type: 'alert',
+        },
+        ...prev,
+      ]);
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [appName, handleLoginSuccess]);
+
+
+
+  return (
+    <div className="min-h-screen bg-[#0a0a0c] text-white flex flex-col font-sans selection:bg-[#E10600] selection:text-white">
       {/* Main Navbar */}
       <Navbar
         notifications={notifications}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
-        backendOnline={backendOnline}
+        user={user}
+        onOpenLogin={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
       />
 
+
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* 1. Immersive Hero Section with Quick Ticket Finder */}
         <Hero
+          onSelectZoneCta={(zoneId?: string, passType?: PassType) => {
+            if (zoneId) {
+              const matched = zones.find((z) => z.id === zoneId);
+              if (matched) {
+                handleSelectZone(matched, passType);
+                return;
+              }
+            }
+            const el = document.getElementById('ticket-passes');
+            el?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+
+        {/* 2. Official Ticket Passes & Collector Pass Tiers */}
+        <TicketPasses
+          zones={zones}
+          onSelectZone={(zoneId: string) => {
+            const matched = zones.find((z) => z.id === zoneId) || zones[0];
+            handleSelectZone(matched, '3day');
+          }}
+        />
+
+        {/* 3. Peta Interaktif & Pemilihan Zona Tempat Duduk Mandalika */}
+        <ZoneSelector
+          zones={zones}
+          onSelectZone={handleSelectZone}
+          isLoading={false}
+          initialPassType={selectedPass}
+        />
+
+        {/* 4. Official Championship Riders & Team Showcase */}
+        <RidersShowcase
           onSelectZoneCta={() => {
             const el = document.getElementById('circuit-zones');
             el?.scrollIntoView({ behavior: 'smooth' });
           }}
         />
-
-        {/* System Architecture & Setup Status Bar */}
-        <section className="bg-[#10121a] border-y border-[#202332] py-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
-              <div className="p-4 rounded-xl bg-[#161824] border border-[#272b3c] flex items-center space-x-3">
-                <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-                <div>
-                  <div className="font-bold text-white uppercase tracking-wider">
-                    Identitas Aplikasi
-                  </div>
-                  <div className="text-gray-400">
-                    Nama: <strong className="text-white">{appName}</strong> (Backend & Frontend Env)
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#161824] border border-[#272b3c] flex items-center space-x-3">
-                <Database className="w-5 h-5 text-purple-400 shrink-0" />
-                <div>
-                  <div className="font-bold text-white uppercase tracking-wider">
-                    Database PostgreSQL
-                  </div>
-                  <div className="text-gray-400">Neon Cloud • 6 Tabel Relasional</div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#161824] border border-[#272b3c] flex items-center space-x-3">
-                <ShieldCheck className="w-5 h-5 text-cyan-400 shrink-0" />
-                <div>
-                  <div className="font-bold text-white uppercase tracking-wider">
-                    Skema & Booking Code
-                  </div>
-                  <div className="text-gray-400">
-                    Index Unik: <code className="text-[#00F0FF]">MTX-YYYY-XXXX</code>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#161824] border border-[#272b3c] flex items-center space-x-3">
-                <Bell className="w-5 h-5 text-amber-400 shrink-0" />
-                <div>
-                  <div className="font-bold text-white uppercase tracking-wider">
-                    Pusher WebSocket
-                  </div>
-                  <div className="text-gray-400">Cluster ap1 • Notifikasi Live</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Circuit Zones Section */}
-        <ZoneSelector zones={zones} onSelectZone={handleSelectZone} isLoading={isLoading} />
       </main>
 
       {/* Booking Modal */}
       {isModalOpen && (
         <BookingModal
           zone={selectedZone}
+          initialPassType={selectedPass}
+          availableZones={zones}
+          onSelectZone={(z) => setSelectedZone(z)}
           onClose={() => setIsModalOpen(false)}
           onBookingSuccess={handleBookingSuccess}
+          onBookingPending={handleBookingPending}
+          currentUser={user}
+          onOpenLogin={() => {
+            setIsModalOpen(false);
+            setIsAuthModalOpen(true);
+          }}
         />
       )}
+
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
 
       {/* Live Notification Drawer */}
       <LiveNotifications
@@ -294,6 +514,10 @@ export const App: React.FC = () => {
         notifications={notifications}
         onClear={() => setNotifications([])}
         onTriggerTestNotification={handleTriggerTestNotification}
+        onTriggerPendingTestNotification={handleTriggerPendingTestNotification}
+        onResumePayment={handleResumePayment}
+        onCancelPayment={handleCancelPayment}
+        onDismissNotification={handleDismissNotification}
       />
 
       {/* Footer */}

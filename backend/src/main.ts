@@ -51,9 +51,11 @@ export async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('Health', 'System status and database connectivity')
+    .addTag('Authentication', 'Google OAuth 2.0 & JWT session management')
     .addTag('Events', 'MotoGP races, circuits, zones and ticket categories')
     .addTag('Notifications', 'Live broadcast and email notification templates')
     .build();
+
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, {

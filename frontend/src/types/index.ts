@@ -1,11 +1,28 @@
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  avatarUrl?: string;
+  role?: 'CUSTOMER' | 'ADMIN' | 'ORGANIZER';
+}
+
+export type PassType = '3day' | 'sunday' | 'saturday' | 'friday' | 'vip';
+
 export interface Zone {
   id: string;
   eventId: string;
   name: string;
+  category?: 'PREMIUM_GRANDSTAND' | 'REGULAR_GRANDSTAND' | 'GENERAL_ADMISSION' | 'VIP_HOSPITALITY' | string;
+  categoryLabel?: string;
   capacity: number;
   price: number | string;
   description?: string;
   availableSeats?: number;
+  dailyPriceSunday?: number;
+  dailyPriceSaturday?: number;
+  dailyPriceFriday?: number;
+  isDailyAvailable?: boolean;
 }
 
 export interface Event {
@@ -51,5 +68,11 @@ export interface AppNotification {
   title: string;
   message: string;
   timestamp: string;
-  type?: 'info' | 'success' | 'alert';
+  type?: 'info' | 'success' | 'alert' | 'pending' | 'cancelled';
+  snapToken?: string;
+  bookingCode?: string;
+  amount?: number;
+  zoneName?: string;
+  actionLabel?: string;
 }
+

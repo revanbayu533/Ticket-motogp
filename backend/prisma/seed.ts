@@ -69,37 +69,76 @@ async function main() {
 
   console.log(`✅ Event ready: ${mandalikaEvent.title} (ID: ${mandalikaEvent.id})`);
 
-  // 3. Seed Zones with Realistic Prices
+  // 3. Seed Zones with Official Mandalika Injourney Categories
   const zonesData = [
+    {
+      name: 'Premium Grandstand - Zona A',
+      capacity: 2500,
+      price: 2500000,
+      description:
+        'Berada di lintasan lurus utama, menghadap garis start/finish dan gedung pit. Cocok untuk melihat momen pelepasan dan aksi pengereman ke Tikungan 1.',
+    },
+    {
+      name: 'Premium Grandstand - Zona B',
+      capacity: 2200,
+      price: 2300000,
+      description:
+        'Menghadap langsung ke Tikungan 1, titik favorit melihat pembalap melakukan pengereman keras.',
+    },
+    {
+      name: 'Premium Grandstand - Zona C',
+      capacity: 2000,
+      price: 2000000,
+      description: 'Terletak di area strategis tikungan awal.',
+    },
+    {
+      name: 'Premium Grandstand - Zona J',
+      capacity: 2500,
+      price: 2000000,
+      description:
+        'Menghadap ke Tikungan 15 dan jalur menuju tikungan kedua dari terakhir.',
+    },
+    {
+      name: 'Premium Grandstand - Zona K',
+      capacity: 2500,
+      price: 2000000,
+      description:
+        'Menghadap ke tikungan terakhir (Tikungan 16) menuju lintasan lurus garis akhir perlombaan.',
+    },
+    {
+      name: 'Regular Grandstand - Zona D & E',
+      capacity: 3500,
+      price: 1500000,
+      description:
+        'Terletak di sekitar area tikungan tengah (antara Tikungan 6 dan 7).',
+    },
+    {
+      name: 'Regular Grandstand - Zona G',
+      capacity: 3000,
+      price: 1250000,
+      description:
+        'Berada di ujung lintasan lurus antara Tikungan 12 dan 13.',
+    },
+    {
+      name: 'Regular Grandstand - Zona H & I',
+      capacity: 3000,
+      price: 1250000,
+      description:
+        'Menghadap rangkaian tikungan teknikal sebelum sektor akhir sirkuit.',
+    },
+    {
+      name: 'General Admission (GA)',
+      capacity: 10000,
+      price: 650000,
+      description:
+        'Area berdiri atau tanpa nomor kursi tetap yang memberikan keleluasaan bergerak bagi penonton di sekitar area sirkuit.',
+    },
     {
       name: 'VIP Hospitality Village Deluxe Class',
       capacity: 350,
       price: 15000000,
-      description: 'Suite ber-AC mewah dengan pemandangan langsung pit lane, akses Pit Walk eksklusif, gourmet buffet 3-course & open bar premium.',
-    },
-    {
-      name: 'Premiere Grandstand Zone A (Start / Finish Grid)',
-      capacity: 2500,
-      price: 2500000,
-      description: 'Tribun beratap persis di hadapan garis start/finish, grid posisi pembalap, dan seremoni podium juara.',
-    },
-    {
-      name: 'Standard Grandstand Zone C (Turn 1 Overtaking)',
-      capacity: 3000,
-      price: 1500000,
-      description: 'Spot terbaik aksi pengereman tajam dan tikungan pertama yang menjadi arena adu manuver overtake terpanas.',
-    },
-    {
-      name: 'Standard Grandstand Zone J (Turn 16 Final Corner)',
-      capacity: 3000,
-      price: 1250000,
-      description: 'Menyaksikan akselerasi penuh motor MotoGP keluar dari tikungan terakhir menuju trek lurus kencang.',
-    },
-    {
-      name: 'General Admission Festival (Bukit Seger Panorama)',
-      capacity: 8000,
-      price: 650000,
-      description: 'Area berdiri dan bersantai di atas Bukit Seger dengan lanskap sirkuit spektakuler berlatar belakang Samudra Hindia.',
+      description:
+        'Suite ber-AC mewah dengan pemandangan langsung pit lane, akses Pit Walk eksklusif, gourmet buffet 3-course & open bar premium.',
     },
   ];
 
@@ -117,6 +156,15 @@ async function main() {
         data: {
           eventId: mandalikaEvent.id,
           name: z.name,
+          capacity: z.capacity,
+          price: z.price,
+          description: z.description,
+        },
+      });
+    } else {
+      zone = await prisma.zone.update({
+        where: { id: zone.id },
+        data: {
           capacity: z.capacity,
           price: z.price,
           description: z.description,
